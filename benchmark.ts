@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import puppeteer, { Browser } from "puppeteer";
+import puppeteer, { Browser, Page } from "puppeteer";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 import { URL } from "url";
@@ -36,7 +36,7 @@ interface BenchmarkResults {
     number: number;
     type: string;
     message: string;
-    details?: any;
+    details?: unknown;
   }>;
 }
 
@@ -58,6 +58,10 @@ const colors = {
   nc: "\x1b[0m",
 };
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 class PuppeteerBenchmark {
   private results: RequestTiming[] = [];
   private browser: Browser | null = null;
@@ -66,7 +70,7 @@ class PuppeteerBenchmark {
     number: number;
     type: string;
     message: string;
-    details?: any;
+    details?: unknown;
   }> = [];
   private networkOptions: NetworkOptions;
   private networkDescription: string = "";
@@ -123,10 +127,10 @@ class PuppeteerBenchmark {
         headless: true,
         args: args,
       });
-    } catch (error: any) {
-      const errorMsg = `Failed to launch browser: ${error.message}`;
+    } catch (error: unknown) {
+      const errorMsg = `Failed to launch browser: ${getErrorMessage(error)}`;
       this.errorLog.push(errorMsg);
-      throw new Error(errorMsg);
+      throw error;
     }
   }
 
@@ -136,7 +140,7 @@ class PuppeteerBenchmark {
     }
   }
 
-  private async emulateNetwork(page: any) {
+  private async emulateNetwork(page: Page) {
     if (
       !this.networkOptions.offline &&
       !this.networkOptions.latency &&
@@ -159,7 +163,7 @@ class PuppeteerBenchmark {
       return;
     }
 
-    const conditions: any = {
+    const conditions = {
       offline: false,
       latency: this.networkOptions.latency || 0,
       downloadThroughput:
@@ -174,7 +178,7 @@ class PuppeteerBenchmark {
     number: number,
     type: string,
     message: string,
-    details?: any,
+    details?: unknown,
   ) {
     this.detailedErrors.push({ number, type, message, details });
     console.log(
@@ -254,7 +258,7 @@ class PuppeteerBenchmark {
           waitUntil: "networkidle2",
           timeout: 30000,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         navigationError = err;
       }
 
@@ -302,7 +306,10 @@ class PuppeteerBenchmark {
         }
       }
 
-      if (navigationError && navigationError.message.includes("timeout")) {
+      if (
+        navigationError &&
+        getErrorMessage(navigationError).includes("timeout")
+      ) {
         this.addDetailedError(number, "TIMEOUT", `Request timed out`, {
           timeout: 30,
           totalTime,
@@ -314,13 +321,13 @@ class PuppeteerBenchmark {
           timeConnect: 0,
           timeTTFB: 0,
           error: "TIMEOUT",
-          errorDetails: navigationError.message,
+          errorDetails: getErrorMessage(navigationError),
           errorType: "TIMEOUT",
         };
       }
 
       if (navigationError) {
-        const errorMsg = navigationError.message;
+        const errorMsg = getErrorMessage(navigationError);
         let type = "NAVIGATION_ERROR";
         if (errorMsg.includes("ERR_CONNECTION_REFUSED"))
           type = "CONNECTION_REFUSED";
@@ -358,11 +365,12 @@ class PuppeteerBenchmark {
         errorDetails: "Unknown error",
         errorType: "UNKNOWN",
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMsg = getErrorMessage(error);
       this.addDetailedError(
         number,
         "EXCEPTION",
-        error.message || "Unknown exception",
+        errorMsg || "Unknown exception",
       );
       return {
         number,
@@ -371,14 +379,16 @@ class PuppeteerBenchmark {
         timeConnect: 0,
         timeTTFB: 0,
         error: "EXCEPTION",
-        errorDetails: error.message,
+        errorDetails: errorMsg,
         errorType: "EXCEPTION",
       };
     } finally {
       if (page) {
         try {
           await page.close();
-        } catch (closeError: any) {}
+        } catch {
+          // Ignore errors while closing the page.
+        }
       }
     }
   }
@@ -395,11 +405,11 @@ class PuppeteerBenchmark {
 
     try {
       await this.init(useHttp3, forceQuicOn);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.addDetailedError(
         0,
         "INIT_ERROR",
-        `Failed to initialize browser: ${error.message}`,
+        `Failed to initialize browser: ${getErrorMessage(error)}`,
       );
       throw error;
     }
@@ -407,15 +417,18 @@ class PuppeteerBenchmark {
     console.log("    Warming up...");
     try {
       await this.doRequest(0, url);
-    } catch (error: any) {}
+    } catch {
+      // Ignore warm-up request errors.
+    }
     await this.sleep(500);
 
     for (let i = 1; i <= requests; i++) {
       try {
         const result = await this.doRequest(i, url);
         this.results.push(result);
-      } catch (error: any) {
-        this.addDetailedError(i, "CRITICAL_ERROR", error.message);
+      } catch (error: unknown) {
+        const errorMsg = getErrorMessage(error);
+        this.addDetailedError(i, "CRITICAL_ERROR", errorMsg);
         this.results.push({
           number: i,
           status: 0,
@@ -423,7 +436,7 @@ class PuppeteerBenchmark {
           timeConnect: 0,
           timeTTFB: 0,
           error: "CRITICAL_ERROR",
-          errorDetails: error.message,
+          errorDetails: errorMsg,
           errorType: "CRITICAL",
         });
       }
@@ -695,7 +708,7 @@ if (!options.url) {
 
 try {
   new URL(options.url);
-} catch (e) {
+} catch {
   console.error(`${colors.red}Error: Invalid URL format${colors.nc}`);
   process.exit(1);
 }
