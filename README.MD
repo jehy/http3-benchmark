@@ -32,6 +32,14 @@ npm start -- -u https://example.com --offline
 
 #### Running with Docker (Node.js 26)
 
+From a prepared image:
+
+```bash
+docker run ghcr.io/jehy/http3-benchmark  -a 10 -u https://example.com
+```
+
+Building from source:
+
 ```bash
 docker build -t http3-benchmark .
 docker run --rm http3-benchmark -u https://example.com
