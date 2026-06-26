@@ -2,7 +2,11 @@
 
 Benchmark to compare HTTP/2 and HTTP/3 with Puppeteer.
 
-HTTP/3 is forced for the target URL even if no Alt-Svc header is received.
+HTTP/3 is forced for the target URL even if no `Alt-Svc` header is received.
+
+## Why puppeteer?
+
+There are no reliable tools to check real performance, because curl will only measure cold start, and there are many client implimentations, but we're only interested in browser performance usually.
 
 ## 📋 Requirements
 
