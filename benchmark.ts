@@ -120,6 +120,8 @@ class PuppeteerBenchmark {
         `--origin-to-force-quic-on=${forceQuicOn}`,
         "--disable-features=UseChromiumHttp3",
       );
+    } else {
+      args.push("--disable-quic");
     }
 
     try {
