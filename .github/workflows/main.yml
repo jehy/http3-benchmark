@@ -14,7 +14,23 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install and Test 🔧 # This example project is built using npm and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
+      - name: Install and Test 🔧
         run: |
           npm ci
           npm run lint
+  benchmark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [26.x ]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install and benchmark 🔧
+        run: |
+          npm ci
+          npm start -- -u https://www.google.com -a 10

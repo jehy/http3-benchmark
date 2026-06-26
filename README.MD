@@ -68,16 +68,16 @@ Option	Description	Default	Example
 
 ```bash
 # Standard test
-npm start -- -u https://serial-wod.ru -a 30
+npm start -- -u https://example.com -a 30
 
 # Test with 3G network emulation
-npm start -- -u https://serial-wod.ru -a 50 --latency 100 --download 1.5 --upload 0.75
+npm start -- -u https://example.com -a 50 --latency 100 --download 1.5 --upload 0.75
 
 # Test with 4G network emulation
-npm start -- -u https://serial-wod.ru -a 100 --latency 50 --download 20 --upload 10
+npm start -- -u https://example.com -a 100 --latency 50 --download 20 --upload 10
 
 # Test with weak Wi-Fi emulation
-npm start -- -u https://serial-wod.ru -a 30 --latency 20 --download 5 --upload 2
+npm start -- -u https://example.com -a 30 --latency 20 --download 5 --upload 2
 ```
 
 ### 📁 Results
